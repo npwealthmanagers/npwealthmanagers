@@ -24,15 +24,19 @@ export const Route = createFileRoute("/contact")({
 
 type Errors = Partial<Record<"name" | "email" | "phone" | "message", string>>;
 
+const CONTACT_API_URL = import.meta.env.VITE_CONTACT_API_URL ?? "http://localhost:3001/contact";
+
 function Contact() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", service: "Loans", message: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const field =
     "border-border bg-background focus:border-gold mt-2 w-full border px-4 py-3 text-sm outline-none";
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: Errors = {};
     if (form.name.trim().length < 2) next.name = "Please enter your full name.";
@@ -40,7 +44,28 @@ function Contact() {
     if (!/^[0-9+\s-]{10,15}$/.test(form.phone)) next.phone = "Please enter a valid phone number.";
     if (form.message.trim().length < 10) next.message = "Please tell us a little more (10+ characters).";
     setErrors(next);
-    setSent(Object.keys(next).length === 0);
+    setSubmitError(null);
+    setSent(false);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(CONTACT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Failed to send message. Please try again.");
+      }
+      setSent(true);
+      setForm({ name: "", email: "", phone: "", service: "Loans", message: "" });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -127,9 +152,10 @@ function Contact() {
             </div>
             <button
               type="submit"
-              className="bg-brand-red text-gold-soft hover:bg-brand-red-dark mt-6 rounded-sm px-7 py-3 text-xs font-semibold tracking-[0.14em] uppercase"
+              disabled={submitting}
+              className="bg-brand-red text-gold-soft hover:bg-brand-red-dark mt-6 rounded-sm px-7 py-3 text-xs font-semibold tracking-[0.14em] uppercase disabled:opacity-60"
             >
-              Send Message
+              {submitting ? "Sending…" : "Send Message"}
             </button>
             <p aria-live="polite" className="mt-3 text-sm">
               {sent ? (
@@ -138,6 +164,7 @@ function Contact() {
                   working day.
                 </span>
               ) : null}
+              {submitError ? <span className="text-destructive font-semibold">{submitError}</span> : null}
             </p>
           </form>
 
