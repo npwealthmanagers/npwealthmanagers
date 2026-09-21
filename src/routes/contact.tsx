@@ -24,7 +24,8 @@ export const Route = createFileRoute("/contact")({
 
 type Errors = Partial<Record<"name" | "email" | "phone" | "message", string>>;
 
-const CONTACT_API_URL = import.meta.env.VITE_CONTACT_API_URL ?? "http://localhost:3001/contact";
+const CONTACT_API_URL =
+  import.meta.env["VITE_CONTACT_API_URL"] ?? "http://localhost:3001/contact";
 
 function Contact() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", service: "Loans", message: "" });
